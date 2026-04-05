@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SpendStory — AI Personal Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+/* ── Variables ── */
+:root{
+  --bg:#f7f6f3;--surface:#ffffff;--surface2:#f0efe9;--surface3:#e8e7e0;
+  --text:#1a1916;--text2:#6b6a63;--text3:#9b9a93;
+  --border:#e2e1da;--accent:#1a1916;--accent2:#3d6b4f;
+  --danger:#c0392b;--warn:#d4780a;--info:#2563a8;--success:#2d7a4f;
+  --font:'DM Sans',sans-serif;--font-serif:'DM Serif Display',serif;
+  --r:10px;--r2:14px;
+}
+.dark{
+  --bg:#0f0f0d;--surface:#1a1916;--surface2:#222220;--surface3:#2a2a27;
+  --text:#f0efe9;--text2:#9b9a93;--text3:#5a5a53;
+  --border:#2e2e2a;--accent:#f0efe9;--accent2:#5aad78;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;transition:background .2s,color .2s;}
+button{font-family:var(--font);cursor:pointer;}
+input,select,textarea{font-family:var(--font);}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+.fade-up{animation:fadeUp .35s ease forwards;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px;}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r);font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:all .15s;}
+.btn:hover{background:var(--surface2);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-dark{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.btn-dark:hover{opacity:.85;background:var(--accent);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-full{width:100%;justify-content:center;padding:12px;}
+.btn-danger{background:var(--danger);color:#fff;border-color:var(--danger);}
+.btn-danger:hover{opacity:.85;background:var(--danger);}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:18px;}
+.metric-card{background:var(--surface2);border-radius:var(--r);padding:14px;}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.metric-val{font-size:24px;font-weight:500;color:var(--text);}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* ── Tags ── */
+.tag{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;}
+.tag-g{background:#e6f4ed;color:#1a6640;}
+.tag-r{background:#fdecea;color:#9b2a20;}
+.tag-b{background:#e8f0fc;color:#1a4a8a;}
+.tag-a{background:#fef3e2;color:#92520a;}
+.tag-p{background:#f0eeff;color:#3d2f9e;}
+.dark .tag-g{background:#1a3328;color:#5aad78;}
+.dark .tag-r{background:#3a1a18;color:#e07060;}
+.dark .tag-b{background:#1a2540;color:#6090e0;}
+.dark .tag-a{background:#3a2810;color:#d4900a;}
+
+/* ── Progress ── */
+.progress{height:6px;background:var(--surface3);border-radius:99px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:99px;transition:width .8s ease;}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.tab{padding:8px 14px;font-size:13px;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--text);border-bottom-color:var(--accent);font-weight:500;}
+
+/* ── Table ── */
+.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+.data-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);}
+.data-table tr:hover td{background:var(--surface2);}
+.data-table tr:last-child td{border-bottom:none;}
+
+/* ── Search/Filter ── */
+.search-input,.filter-select{padding:8px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;outline:none;transition:border-color .15s;}
+.search-input:focus,.filter-select:focus{border-color:var(--accent);}
+.search-input{width:220px;}
+
+/* ── Chat ── */
+.chat-wrap{display:flex;flex-direction:column;height:460px;}
+.chat-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.chat-msg{max-width:85%;padding:10px 14px;border-radius:var(--r2);font-size:13px;line-height:1.6;}
+.chat-msg.user{background:var(--accent);color:var(--bg);align-self:flex-end;border-radius:var(--r2) var(--r2) 4px var(--r2);}
+.chat-msg.ai{background:var(--surface2);color:var(--text);align-self:flex-start;border-radius:var(--r2) var(--r2) var(--r2) 4px;}
+.chat-quick{padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;}
+.chat-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);}
+.chat-input{flex:1;padding:9px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;outline:none;}
+.chat-input:focus{border-color:var(--accent);}
+
+/* ── Dropzone ── */
+.dropzone{border:1.5px dashed var(--border);border-radius:var(--r2);padding:40px;text-align:center;cursor:pointer;background:var(--surface2);transition:all .15s;}
+.dropzone:hover{border-color:var(--accent);background:var(--surface3);}
+
+/* ── Layout ── */
+.app{display:flex;min-height:100vh;}
+.main{flex:1;overflow:auto;min-width:0;display:flex;flex-direction:column;}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:all .2s;}
+.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border);}
+.logo-mark{display:flex;align-items:center;gap:8px;}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.logo-text{font-family:var(--font-serif);font-size:17px;color:var(--text);}
+.nav{padding:12px 10px;flex:1;}
+.nav-section{font-size:10px;letter-spacing:.08em;color:var(--text3);padding:12px 10px 4px;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r);color:var(--text2);font-size:13px;font-weight:400;border:none;background:none;width:100%;text-align:left;transition:all .15s;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--surface3);color:var(--text);font-weight:500;}
+.nav-item svg{flex-shrink:0;opacity:.7;}
+.nav-item.active svg{opacity:1;}
+.sidebar-bottom{padding:12px 10px;border-top:1px solid var(--border);}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:10;}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-title{font-size:15px;font-weight:500;}
+.upload-status{font-size:12px;color:var(--text3);}
+.dark-toggle{width:36px;height:20px;background:var(--surface3);border-radius:99px;cursor:pointer;position:relative;border:1px solid var(--border);transition:background .2s;}
+.dark-toggle-thumb{width:14px;height:14px;background:var(--text);border-radius:50%;position:absolute;top:2px;left:2px;transition:transform .2s;}
+.dark .dark-toggle-thumb{transform:translateX(16px);}
+.hamburger{display:none;background:none;border:none;padding:4px;}
+.page{display:none;padding:24px;flex:1;}
+.page.active{display:block;}
+.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.step-dots{display:flex;gap:6px;justify-content:center;margin-top:20px;}
+.step-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .2s;}
+.step-dot.active{background:var(--accent);width:18px;border-radius:99px;}
+.forecast-card{background:var(--surface2);border-radius:var(--r);padding:14px;border-left:3px solid var(--accent2);}
+.skeleton{background:var(--surface3);border-radius:6px;animation:pulse 1.4s ease infinite;}
+
+@media(max-width:680px){
+  .sidebar{position:fixed;left:-220px;top:0;height:100%;z-index:100;transition:left .25s;}
+  .sidebar.open{left:0;box-shadow:0 0 40px rgba(0,0,0,.15);}
+  .hamburger{display:block;}
+  .page{padding:16px;}
+  .topbar{padding:12px 16px;}
+  .grid-4,.grid-3{grid-template-columns:repeat(2,1fr)!important;}
+  .grid-2{grid-template-columns:1fr!important;}
+  .search-input{width:100%;}
+}
+@media(max-width:400px){
+  .grid-4,.grid-3{grid-template-columns:1fr!important;}
+}
+
+/* ── Upload page extras ── */
+.fmt-btn{padding:6px 14px;border-radius:var(--r);font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;font-family:var(--font);}
+.fmt-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.fmt-btn:hover:not(.active){background:var(--surface2);color:var(--text);}
+.file-type-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 8px;border-radius:99px;border:1px solid var(--border);color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="logo-text">SpendStory</span>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">Main</div>
+      <button class="nav-item active" data-page="overview">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/></svg>
+        Overview
+      </button>
+      <button class="nav-item" data-page="transactions">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Transactions
+      </button>
+      <button class="nav-item" data-page="compare">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Compare & Forecast
+      </button>
+      <div class="nav-section">Insights</div>
+      <button class="nav-item" data-page="score">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Health Score
+      </button>
+      <button class="nav-item" data-page="subscriptions">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg>
+        Subscriptions
+      </button>
+      <button class="nav-item" data-page="budget">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Smart Budget
+      </button>
+      <button class="nav-item" data-page="chat">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        AI Chat
+      </button>
+      <div class="nav-section">Share</div>
+      <button class="nav-item" data-page="wrapped">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 9-14 9V3z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Spending Wrapped
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="nav-item" id="new-upload-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        New Upload
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="var(--text)" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <span class="topbar-title" id="page-title">Overview</span>
+      </div>
+      <div class="topbar-right">
+        <span class="upload-status" id="upload-status"></span>
+        <div class="dark-toggle" id="dark-toggle" title="Toggle dark mode">
+          <div class="dark-toggle-thumb"></div>
+        </div>
+      </div>
+    </div>
+    <div id="page-upload"        class="page active"></div>
+    <div id="page-overview"      class="page"></div>
+    <div id="page-transactions"  class="page"></div>
+    <div id="page-compare"       class="page"></div>
+    <div id="page-score"         class="page"></div>
+    <div id="page-subscriptions" class="page"></div>
+    <div id="page-budget"        class="page"></div>
+    <div id="page-chat"          class="page"></div>
+    <div id="page-wrapped"       class="page"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════ */
+const COLORS = ['#3d6b4f','#2563a8','#c05621','#7c3d9e','#b7791f','#c0392b','#1a6b6b','#6b4226'];
+const CATEGORIES = ['Food & Dining','Transport','Shopping','Entertainment','Health','Utilities','Travel','Other'];
+const SUBSCRIPTION_KEYWORDS = ['spotify','netflix','youtube','amazon prime','apple','disney','hulu','gym','adobe','dropbox','slack','zoom','notion','figma','chatgpt','openai','microsoft','google','icloud','prime'];
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_API   = 'https://api.anthropic.com/v1/messages';
+
+/* ═══════════════════════════════════════════
+   CHARTS
+   ═══════════════════════════════════════════ */
+const _charts = {};
+function destroyChart(id){if(_charts[id]){_charts[id].destroy();delete _charts[id];}}
+
+function createCategoryChart(id, labels, values){
+  destroyChart(id);
+  _charts[id] = new Chart(document.getElementById(id),{
+    type:'doughnut',
+    data:{labels,datasets:[{data:values,backgroundColor:COLORS.slice(0,labels.length),borderWidth:0,hoverBorderWidth:2,hoverBorderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
+}
+
+function createTrendChart(id, labels, values){
+  destroyChart(id);
+  _charts[id] = new Chart(document.getElementById(id),{
+    type:'bar',
+    data:{labels,datasets:[{data:values,backgroundColor:'rgba(61,107,79,0.15)',borderColor:'#3d6b4f',borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:10}},
+              y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},callback:v=>'$'+v}}}}
+  });
+}
+
+function createCompareChart(id, labels, d1, d2){
+  destroyChart(id);
+  _charts[id] = new Chart(document.getElementById(id),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Prior period',data:d1,borderColor:'#9b9a93',borderWidth:1.5,tension:.4,pointRadius:0,fill:false},
+      {label:'Current period',data:d2,borderColor:'#3d6b4f',borderWidth:2,tension:.4,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:12,usePointStyle:true}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
+              y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},callback:v=>'$'+v}}}}
+  });
+}
+
+/* ═══════════════════════════════════════════
+   PDF PARSER
+   ═══════════════════════════════════════════ */
+const PDFParser = (() => {
+  const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  const IMAGE_TYPES = ['image/jpeg','image/png','image/webp','image/bmp','image/tiff'];
+  const PK_BANK_KEYWORDS = ['meezan','hbl','habib','mcb','ubl','united bank','alfalah','js bank','bank alfalah','askari','faysal','standard chartered','bank of punjab','bop','soneri','silk bank'];
+
+  function parseDate(raw){
+    if(!raw)return null; raw=raw.trim();
+    const m1=raw.match(/^(\d{1,2})[-\/](jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[-\/](\d{2,4})$/i);
+    if(m1){let yr=parseInt(m1[3]);if(yr<100)yr+=2000;return`${yr}-${String(MONTHS[m1[2].slice(0,3).toLowerCase()]).padStart(2,'0')}-${m1[1].padStart(2,'0')}`;}
+    const m2=raw.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2,4})$/);
+    if(m2){let yr=parseInt(m2[3]);if(yr<100)yr+=2000;return`${yr}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;}
+    const m3=raw.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+    if(m3)return`${m3[1]}-${m3[2].padStart(2,'0')}-${m3[3].padStart(2,'0')}`;
+    const m4=raw.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})[,\s]+(\d{2,4})$/i);
+    if(m4){let yr=parseInt(m4[3]);if(yr<100)yr+=2000;return`${yr}-${String(MONTHS[m4[1].slice(0,3).toLowerCase()]).padStart(2,'0')}-${m4[2].padStart(2,'0')}`;}
+    return null;
+  }
+
+  function parseAmount(raw){
+    if(!raw||raw==='-'||raw.trim()==='')return null;
+    raw=raw.trim();
+    const pkMatch=raw.match(/^([\d,]+),(\d{2})$/);
+    if(pkMatch){const intPart=pkMatch[1].replace(/,/g,'');return parseFloat(intPart+'.'+pkMatch[2]);}
+    const clean=raw.replace(/[, ]/g,'').replace(/[()]/g,'');
+    const val=parseFloat(clean);
+    return isNaN(val)?null:val;
+  }
+
+  async function extractPdfItems(buf){
+    const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+    const pages=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const content=await page.getTextContent();
+      const vp=page.getViewport({scale:1});
+      const items=content.items.map(item=>({text:item.str,x:Math.round(item.transform[4]),y:Math.round(vp.height-item.transform[5]),w:Math.round(item.width)})).filter(i=>i.text.trim());
+      pages.push({items,width:vp.width,height:vp.height});
+    }
+    return{pdf,pages};
+  }
+
+  function groupIntoLines(items,yTol=5){
+    const sorted=[...items].sort((a,b)=>a.y-b.y||a.x-b.x);
+    const lines=[];let cur=[];
+    sorted.forEach(item=>{
+      if(cur.length&&Math.abs(item.y-cur[0].y)>yTol){lines.push(cur);cur=[];}
+      cur.push(item);
+    });
+    if(cur.length)lines.push(cur);
+    return lines.map(line=>({y:line[0].y,text:line.sort((a,b)=>a.x-b.x).map(i=>i.text).join(' ').trim(),items:line.sort((a,b)=>a.x-b.x)}));
+  }
+
+  function isPakistaniBank(pages){
+    const txt=pages[0]?.items.map(i=>i.text).join(' ').toLowerCase()||'';
+    return PK_BANK_KEYWORDS.some(kw=>txt.includes(kw))||/\b(debit|credit|balance|particular|withdrawal|deposit)\b/i.test(txt);
+  }
+
+  function detectColumns(lines){
+    const hLine=lines.find(l=>/\bdebit\b/i.test(l.text)&&/\bcredit\b/i.test(l.text))||lines.find(l=>/\bwithdrawal\b/i.test(l.text)&&/\bdeposit\b/i.test(l.text));
+    if(!hLine)return null;
+    const cols={};
+    hLine.items.forEach(item=>{
+      const t=item.text.toLowerCase().trim();
+      if(/^date$/i.test(t))cols.date=item.x;
+      if(/^(value.?date|val.?date)$/i.test(t))cols.valueDate=item.x;
+      if(/^(particular|description|narration|details)$/i.test(t))cols.desc=item.x;
+      if(/^(debit|withdrawal|dr)$/i.test(t))cols.debit=item.x;
+      if(/^(credit|deposit|cr)$/i.test(t))cols.credit=item.x;
+      if(/^balance$/i.test(t))cols.balance=item.x;
+    });
+    return Object.keys(cols).length>=3?cols:null;
+  }
+
+  function parsePakistaniFormat(pages){
+    const transactions=[];
+    pages.forEach(page=>{
+      const lines=groupIntoLines(page.items);
+      const cols=detectColumns(lines);
+      const pageW=page.width||800;
+      const dateX=cols?.date??pageW*.02,descX=cols?.desc??pageW*.28;
+      const debitX=cols?.debit??pageW*.68,creditX=cols?.credit??pageW*.78,balanceX=cols?.balance??pageW*.88;
+      const DATE_ZONE=[dateX-5,descX-5],DESC_ZONE=[descX-5,debitX-5];
+      const DEBIT_ZONE=[debitX-5,creditX-5],CREDIT_ZONE=[creditX-5,balanceX-5];
+      const headerY=lines.find(l=>/\bdebit\b/i.test(l.text))?.y??-1;
+      const footerKw=/opening balance|closing balance|total no|total credit|total debit|rupees equivalent|computer generated/i;
+      let pendingDate=null;
+      lines.forEach(line=>{
+        if(line.y<=headerY+2||footerKw.test(line.text)||!line.text.trim())return;
+        const dateParts=[],descParts=[],debitParts=[],creditParts=[];
+        line.items.forEach(item=>{
+          const x=item.x,t=item.text.trim();if(!t)return;
+          if(x>=DATE_ZONE[0]&&x<DATE_ZONE[1])dateParts.push(t);
+          else if(x>=DESC_ZONE[0]&&x<DESC_ZONE[1])descParts.push(t);
+          else if(x>=DEBIT_ZONE[0]&&x<DEBIT_ZONE[1])debitParts.push(t);
+          else if(x>=CREDIT_ZONE[0]&&x<CREDIT_ZONE[1])creditParts.push(t);
+        });
+        const rawDate=dateParts.join('-').trim(),rawDesc=descParts.join(' ').trim();
+        const rawDebit=debitParts.join('').trim(),rawCredit=creditParts.join('').trim();
+        const date=parseDate(rawDate)||parseDate(rawDate.replace(/\s+/g,'-'));
+        if(date&&rawDesc){
+          pendingDate=date;
+          const debitAmt=parseAmount(rawDebit),creditAmt=parseAmount(rawCredit);
+          let amount=null;
+          if(debitAmt&&debitAmt>0)amount=-debitAmt;
+          if(creditAmt&&creditAmt>0)amount=creditAmt;
+          if(amount!==null&&rawDesc&&!/^-+$/.test(rawDesc))transactions.push({Date:date,Description:rawDesc,Amount:amount,Category:''});
+        }else if(!date&&rawDesc&&pendingDate&&transactions.length){
+          const last=transactions[transactions.length-1];
+          if(last.Date===pendingDate)last.Description+=' '+rawDesc;
+        }
+      });
+    });
+    return transactions;
+  }
+
+  const GEN_DATE_PATS=[
+    /\b(\d{1,2})[-\/](jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[-\/](\d{2,4})\b/i,
+    /\b(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2,4})\b/,
+    /\b(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})\b/,
+    /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})[,\s]+(\d{2,4})\b/i,
+  ];
+
+  function parseGenericLines(lines){
+    const txns=[];
+    lines.forEach(line=>{
+      const text=line.text||line;
+      let dateStr=null;
+      for(const pat of GEN_DATE_PATS){const m=text.match(pat);if(m){dateStr=parseDate(m[0]);break;}}
+      if(!dateStr)return;
+      const amounts=[];
+      const pkAmtRe=/\b(\d{1,3}(?:,\d{3})*,\d{2})\b/g;
+      const stdAmtRe=/\b(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)\b/g;
+      let m;
+      while((m=pkAmtRe.exec(text))!==null){const v=parseAmount(m[1]);if(v!==null&&v>=1)amounts.push(v);}
+      if(!amounts.length){while((m=stdAmtRe.exec(text))!==null){const v=parseFloat(m[1].replace(/,/g,''));if(!isNaN(v)&&v>=1&&v<10000000)amounts.push(v);}}
+      if(!amounts.length)return;
+      const amt=-amounts[0];
+      let desc=text;
+      GEN_DATE_PATS.forEach(p=>{desc=desc.replace(p,'');});
+      desc=desc.replace(/[\d,]+,\d{2}/g,'').replace(/\s{2,}/g,' ').trim()||'Transaction';
+      txns.push({Date:dateStr,Description:desc,Amount:amt,Category:''});
+    });
+    return txns;
+  }
+
+  async function extractWithAI(rawText){
+    const sample=rawText.slice(0,6000);
+    const prompt=`You are a Pakistani bank statement parser. Extract ALL transactions from this bank statement text.
+IMPORTANT: Amounts use comma as decimal: 380,00 means PKR 380.00. Debit = money OUT (negative). Credit = money IN (positive).
+Return ONLY a raw JSON array, no markdown: [{"date":"YYYY-MM-DD","description":"merchant","amount":-380.00},...]
+Bank statement text:
+"""
+${sample}
+"""`;
+    const res=await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const text=data.content[0].text.trim().replace(/```json|```/gi,'').trim();
+    const arr=JSON.parse(text);
+    return arr.map(t=>({Date:t.date||'',Description:t.description||'Transaction',Amount:parseFloat(t.amount)||0,Category:''})).filter(t=>t.Date&&t.Amount!==0);
+  }
+
+  async function renderPageToCanvas(pdfPage,scale=2.5){
+    const vp=pdfPage.getViewport({scale});
+    const canvas=document.createElement('canvas');
+    canvas.width=vp.width;canvas.height=vp.height;
+    await pdfPage.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+    return canvas;
+  }
+
+  async function extractScannedText(buf,onProgress){
+    const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+    let text='';
+    for(let p=1;p<=pdf.numPages;p++){
+      onProgress&&onProgress(Math.round(((p-1)/pdf.numPages)*80),`OCR: page ${p} of ${pdf.numPages}…`);
+      const page=await pdf.getPage(p);
+      const canvas=await renderPageToCanvas(page);
+      const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}});
+      text+=result.data.text+'\n';
+    }
+    return text;
+  }
+
+  async function hasDigitalText(buf){
+    try{
+      const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+      const page=await pdf.getPage(1);
+      const content=await page.getTextContent();
+      const chars=content.items.reduce((n,i)=>n+i.str.trim().length,0);
+      return chars>60;
+    }catch{return false;}
+  }
+
+  function isPDF(file){return file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf');}
+  function isImage(file){return IMAGE_TYPES.includes(file.type)||/\.(jpe?g|png|bmp|webp|tiff?)$/i.test(file.name);}
+
+  async function parseFile(file,onProgress=()=>{}){
+    let transactions=[];
+    if(isImage(file)){
+      onProgress(5,'Loading image…');
+      if(typeof Tesseract==='undefined')throw new Error('Tesseract.js not loaded.');
+      const url=URL.createObjectURL(file);
+      onProgress(10,'Running OCR — this takes 20–40 seconds…');
+      const result=await Tesseract.recognize(url,'eng',{logger:m=>m.status==='recognizing text'&&onProgress(10+Math.round(m.progress*70),`OCR: ${Math.round(m.progress*100)}%…`)});
+      URL.revokeObjectURL(url);
+      onProgress(82,'Scanning for transactions…');
+      const lines=result.data.text.split('\n').filter(Boolean).map(t=>({text:t}));
+      transactions=parseGenericLines(lines);
+    }else if(isPDF(file)){
+      onProgress(5,'Opening PDF…');
+      const buffer=await file.arrayBuffer();
+      const digital=await hasDigitalText(buffer);
+      if(digital){
+        onProgress(15,'Extracting text from digital PDF…');
+        const{pages}=await extractPdfItems(buffer);
+        onProgress(50,'Parsing transaction rows…');
+        if(isPakistaniBank(pages)){
+          onProgress(55,'Detected Pakistani bank format — parsing columns…');
+          transactions=parsePakistaniFormat(pages);
+        }
+        if(transactions.length<3){
+          onProgress(65,'Trying generic pattern matching…');
+          const allLines=pages.flatMap(p=>groupIntoLines(p.items));
+          transactions=parseGenericLines(allLines);
+        }
+      }else{
+        onProgress(10,'Scanned PDF detected — starting OCR…');
+        if(typeof Tesseract==='undefined')throw new Error('Tesseract.js not loaded for OCR.');
+        const rawText=await extractScannedText(buffer,onProgress);
+        onProgress(88,'Scanning OCR text for transactions…');
+        const lines=rawText.split('\n').filter(Boolean).map(t=>({text:t}));
+        transactions=parseGenericLines(lines);
+      }
+    }else{throw new Error('Unsupported file type. Please use JPG, PNG, PDF, or CSV.');}
+
+    if(transactions.length<3){
+      onProgress(90,'Using AI to extract transactions…');
+      try{
+        let plainText='';
+        if(isPDF(file)){
+          const buffer=await file.arrayBuffer();
+          if(await hasDigitalText(buffer)){
+            const{pages}=await extractPdfItems(buffer);
+            plainText=pages.flatMap(p=>groupIntoLines(p.items).map(l=>l.text)).join('\n');
+          }
+        }
+        if(!plainText)plainText=transactions.map(t=>JSON.stringify(t)).join('\n');
+        transactions=await extractWithAI(plainText);
+      }catch(err){console.warn('AI fallback failed:',err);}
+    }
+
+    transactions=transactions.filter(t=>t.Date&&t.Amount!==0).map(t=>({...t,Description:t.Description.replace(/\s{2,}/g,' ').trim()||'Transaction'}));
+    onProgress(100,`${transactions.length} transactions extracted`);
+    return transactions;
+  }
+
+  return{parseFile,isPDF,isImage};
+})();
+
+/* ═══════════════════════════════════════════
+   DATA BUILDER
+   ═══════════════════════════════════════════ */
+function buildSummary(rows){
+  const cats={},byDate={},descMap={},txns=[];
+  let total=0;
+  rows.forEach(row=>{
+    const amt=Math.abs(parseFloat(row.Amount||row.amount||row.Debit||row.debit||0));
+    if(!amt||isNaN(amt))return;
+    const desc=row.Description||row.description||row.Merchant||'Unknown';
+    const date=row.Date||row.date||'';
+    const cat=row.Category||row.category||CATEGORIES[Math.floor(Math.random()*CATEGORIES.length)];
+    total+=amt;
+    cats[cat]=(cats[cat]||0)+amt;
+    byDate[date]=(byDate[date]||0)+amt;
+    if(!descMap[desc])descMap[desc]={count:0,total:0,cat};
+    descMap[desc].count++;descMap[desc].total+=amt;
+    txns.push({desc,amt,date,cat});
+  });
+  const sortedCats=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  const sortedDates=Object.entries(byDate).sort((a,b)=>new Date(a[0])-new Date(b[0]));
+  const bigDay=Object.entries(byDate).sort((a,b)=>b[1]-a[1])[0];
+  const smallDay=Object.entries(byDate).sort((a,b)=>a[1]-b[1])[0];
+  const days=sortedDates.length||1;
+  const subs=Object.entries(descMap).filter(([d])=>SUBSCRIPTION_KEYWORDS.some(kw=>d.toLowerCase().includes(kw))).map(([name,v])=>({name,count:v.count,monthly:v.total/Math.max(1,Math.ceil(days/30)),cat:v.cat}));
+  const half=Math.floor(days/2);
+  const firstHalf=sortedDates.slice(0,half).reduce((a,[,v])=>a+v,0);
+  const secHalf=sortedDates.slice(half).reduce((a,[,v])=>a+v,0);
+  return{total,cats:sortedCats,byDate:sortedDates,bigDay,smallDay,txns,count:txns.length,subs,dailyAvg:total/days,firstHalf,secHalf,descMap,story:null};
+}
+
+function generateSampleData(){
+  const merchants=[
+    {n:'Uber Eats',c:'Food & Dining',r:[12,45]},{n:'Spotify',c:'Entertainment',r:[9,9]},
+    {n:'Zara',c:'Shopping',r:[30,120]},{n:'Shell Petrol',c:'Transport',r:[40,80]},
+    {n:'Netflix',c:'Entertainment',r:[15,15]},{n:'Careem',c:'Transport',r:[8,25]},
+    {n:'Grocery Plus',c:'Food & Dining',r:[20,90]},{n:'Gym Membership',c:'Health',r:[35,35]},
+    {n:'Amazon',c:'Shopping',r:[15,200]},{n:'Electricity Bill',c:'Utilities',r:[60,100]},
+    {n:'Cafe Latte',c:'Food & Dining',r:[3,12]},{n:'Booking.com',c:'Travel',r:[80,300]},
+    {n:'YouTube Premium',c:'Entertainment',r:[14,14]},{n:'Adobe CC',c:'Shopping',r:[55,55]},
+    {n:'iCloud Storage',c:'Utilities',r:[3,3]},{n:'Noon',c:'Shopping',r:[20,150]},
+  ];
+  const data=[];const now=new Date();
+  for(let i=60;i>=0;i--){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const date=d.toISOString().split('T')[0];
+    const txnCount=Math.floor(Math.random()*4)+1;
+    for(let j=0;j<txnCount;j++){
+      const m=merchants[Math.floor(Math.random()*merchants.length)];
+      const amt=(m.r[0]+Math.random()*(m.r[1]-m.r[0])).toFixed(2);
+      data.push({Date:date,Description:m.n,Amount:-amt,Category:m.c});
+    }
+  }
+  return data;
+}
+
+/* ═══════════════════════════════════════════
+   API
+   ═══════════════════════════════════════════ */
+async function _claudeCall(prompt,maxTokens=1000){
+  const res=await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})});
+  const data=await res.json();
+  if(data.error)throw new Error(data.error.message);
+  return data.content[0].text;
+}
+
+async function fetchSpendingStory(summary){
+  const prompt=`You are a friendly personal finance narrator. Write a 3-sentence plain English story about this person's spending. Be specific, insightful, slightly witty. No jargon.
+
+Total: $${summary.total.toFixed(2)}
+Transactions: ${summary.count}
+Top categories: ${summary.cats.slice(0,3).map(c=>c[0]+' $'+c[1].toFixed(0)).join(', ')}
+Biggest day: ${summary.bigDay?summary.bigDay[0]+' $'+summary.bigDay[1].toFixed(0):'unknown'}
+
+Write only the story — no intro, no label, just the 3 sentences.`;
+  return _claudeCall(prompt);
+}
+
+async function fetchChatReply(question,context){
+  const prompt=`You are a helpful personal finance assistant. Answer this question based on the user's data below. Be specific, concise, and friendly. 2–3 sentences max.
+
+${context}
+
+Question: ${question}`;
+  return _claudeCall(prompt);
+}
+
+/* ═══════════════════════════════════════════
+   UPLOAD PAGE
+   ═══════════════════════════════════════════ */
+const UploadPage=(() => {
+  let _format='all';
+
+  function buildTemplate(){
+    return `
+    <div id="step-0" style="max-width:500px;margin:0 auto;padding:24px 0;">
+      <div style="text-align:center;padding:16px 0 28px;">
+        <div style="width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h1 style="font-family:var(--font-serif);font-size:28px;margin-bottom:10px;">Welcome to SpendStory</h1>
+        <p style="color:var(--text2);font-size:14px;line-height:1.75;max-width:360px;margin:0 auto;">Upload your bank statement in <strong>any format</strong> — scanned image, PDF, or CSV — and get a personalized AI financial story in seconds.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:24px;">
+        <div style="background:var(--surface2);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:22px;margin-bottom:6px;">🖼️</div><p style="font-size:12px;font-weight:500;">Scanned Images</p><p style="font-size:11px;color:var(--text3);margin-top:2px;">JPG / PNG OCR</p></div>
+        <div style="background:var(--surface2);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:22px;margin-bottom:6px;">📄</div><p style="font-size:12px;font-weight:500;">PDF Statements</p><p style="font-size:11px;color:var(--text3);margin-top:2px;">Digital or scanned</p></div>
+        <div style="background:var(--surface2);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:22px;margin-bottom:6px;">🤖</div><p style="font-size:12px;font-weight:500;">AI Powered</p><p style="font-size:11px;color:var(--text3);margin-top:2px;">Any bank worldwide</p></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:24px;">
+        <span class="file-type-badge">📷 JPG / PNG</span><span class="file-type-badge">📄 PDF</span><span class="file-type-badge">📊 CSV</span><span class="file-type-badge">🔍 OCR</span><span class="file-type-badge">🔒 Private</span>
+      </div>
+      <button class="btn btn-dark btn-full" id="step0-next" style="font-size:15px;padding:14px;">Get started →</button>
+      <div class="step-dots" style="margin-top:20px;"><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div>
+    </div>
+
+    <div id="step-1" style="max-width:500px;margin:0 auto;padding:24px 0;display:none;">
+      <h2 style="font-size:18px;font-weight:500;margin-bottom:6px;">Upload your bank statement</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Any format works — scanned image, digital PDF, or CSV export. Everything stays in your browser.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+        <button class="fmt-btn active" id="fmt-all" onclick="UploadPage.setFormat('all')">All formats</button>
+        <button class="fmt-btn" id="fmt-image" onclick="UploadPage.setFormat('image')">📷 Image (JPG/PNG)</button>
+        <button class="fmt-btn" id="fmt-pdf" onclick="UploadPage.setFormat('pdf')">📄 PDF</button>
+        <button class="fmt-btn" id="fmt-csv" onclick="UploadPage.setFormat('csv')">📊 CSV</button>
+      </div>
+      <div class="dropzone" id="dropzone" style="position:relative;">
+        <div style="width:44px;height:44px;background:var(--surface3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke="var(--text2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <p style="font-size:14px;font-weight:500;margin-bottom:4px;" id="dz-label">Drop file here or click to browse</p>
+        <p style="font-size:12px;color:var(--text3);">JPG · PNG · PDF · CSV</p>
+        <input type="file" id="file-input" accept=".pdf,.csv,.jpg,.jpeg,.png,.bmp,.webp" style="display:none;">
+      </div>
+      <div style="margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:var(--r);display:flex;gap:8px;align-items:flex-start;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:2px;"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="var(--info)" stroke-width="2" stroke-linecap="round"/></svg>
+        <p style="font-size:11px;color:var(--text3);line-height:1.65;">Works with <strong>HBL, MCB, UBL, Meezan, Alfalah, JS Bank, Standard Chartered</strong> and most Pakistani &amp; international banks. Scanned images are read via OCR — please ensure the image is clear.</p>
+      </div>
+      <div id="extract-progress" style="display:none;margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+          <span style="font-size:12px;color:var(--text2);" id="prog-msg">Reading file…</span>
+          <span style="font-size:12px;color:var(--text3);" id="prog-pct">0%</span>
+        </div>
+        <div class="progress"><div class="progress-fill" id="prog-bar" style="width:0%;background:var(--accent);transition:width .3s;"></div></div>
+        <p style="font-size:11px;color:var(--text3);margin-top:5px;" id="prog-note"></p>
+      </div>
+      <div id="file-ready" style="display:none;margin-top:12px;background:var(--surface2);border-radius:var(--r);padding:12px 14px;align-items:center;gap:10px;">
+        <span id="file-emoji" style="font-size:22px;flex-shrink:0;"></span>
+        <div style="flex:1;min-width:0;"><p style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="file-name-label"></p><p style="font-size:11px;color:var(--text3);" id="file-meta-label"></p></div>
+        <span class="tag tag-g" style="flex-shrink:0;">Ready</span>
+      </div>
+      <div id="file-error" style="display:none;margin-top:12px;padding:12px 14px;background:#fdecea;border-radius:var(--r);border-left:3px solid var(--danger);">
+        <p style="font-size:13px;font-weight:500;color:var(--danger);">Could not read file</p>
+        <p style="font-size:12px;color:#9b2a20;margin-top:4px;line-height:1.55;" id="file-error-msg"></p>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;align-items:center;">
+        <span style="font-size:12px;color:var(--text3);">No file yet?</span>
+        <button class="btn btn-sm" id="sample-data-btn">Use sample data</button>
+      </div>
+      <button class="btn btn-dark btn-full" id="step1-next" disabled style="margin-top:16px;padding:13px;">Analyze my statement →</button>
+      <div class="step-dots" style="margin-top:20px;"><div class="step-dot"></div><div class="step-dot active"></div><div class="step-dot"></div></div>
+    </div>
+
+    <div id="step-2" style="max-width:500px;margin:0 auto;padding:24px 0;display:none;">
+      <h2 style="font-size:18px;font-weight:500;margin-bottom:6px;">Building your SpendStory…</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:24px;">AI is reading your transactions and crafting your financial story.</p>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:28px;" id="analysis-rows">
+        ${[['Parsing transactions','Extracting from your statement'],['Categorizing spending','Grouping by merchant type'],['Detecting subscriptions','Finding recurring charges'],['Writing your AI story','Generating your narrative']].map((s,i)=>`
+        <div id="ar-${i}" style="opacity:${i===0?1:0.3};transition:opacity .5s;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div id="ar-icon-${i}" style="width:30px;height:30px;border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              ${i===0?`<div style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;"></div>`:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--text3)" stroke-width="2"/></svg>`}
+            </div>
+            <div><p style="font-size:13px;font-weight:500;">${s[0]}</p><p style="font-size:11px;color:var(--text3);">${s[1]}</p></div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div class="progress"><div class="progress-fill" id="analysis-bar" style="width:0%;background:var(--accent);"></div></div>
+      <p style="font-size:12px;color:var(--text3);margin-top:6px;" id="analysis-pct">0%</p>
+      <div class="step-dots" style="margin-top:22px;"><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot active"></div></div>
+    </div>`;
+  }
+
+  function showStep(n){[0,1,2].forEach(i=>{const el=document.getElementById(`step-${i}`);if(el)el.style.display=i===n?'block':'none';});}
+  function showProgress(pct,msg,note=''){
+    document.getElementById('extract-progress').style.display='block';
+    document.getElementById('file-ready').style.display='none';
+    document.getElementById('file-error').style.display='none';
+    document.getElementById('prog-bar').style.width=pct+'%';
+    document.getElementById('prog-pct').textContent=pct+'%';
+    document.getElementById('prog-msg').textContent=msg;
+    document.getElementById('prog-note').textContent=note;
+  }
+  function showReady(name,meta,emoji){
+    document.getElementById('extract-progress').style.display='none';
+    document.getElementById('file-error').style.display='none';
+    document.getElementById('file-ready').style.display='flex';
+    document.getElementById('file-name-label').textContent=name;
+    document.getElementById('file-meta-label').textContent=meta;
+    document.getElementById('file-emoji').textContent=emoji;
+    document.getElementById('step1-next').disabled=false;
+  }
+  function showError(msg){
+    document.getElementById('extract-progress').style.display='none';
+    document.getElementById('file-ready').style.display='none';
+    document.getElementById('file-error').style.display='block';
+    document.getElementById('file-error-msg').textContent=msg;
+    document.getElementById('step1-next').disabled=true;
+  }
+  function animateAnalysis(){
+    const milestones=[{pct:25,row:0},{pct:55,row:1},{pct:75,row:2},{pct:90,row:3}];
+    let p=0,si=0;
+    const iv=setInterval(()=>{
+      if(si<milestones.length&&p>=milestones[si].pct){
+        const row=document.getElementById(`ar-${milestones[si].row}`);
+        if(row)row.style.opacity='1';
+        si++;
+      }
+      if(p<95)p++;
+      const bar=document.getElementById('analysis-bar');
+      const lbl=document.getElementById('analysis-pct');
+      if(bar)bar.style.width=p+'%';
+      if(lbl)lbl.textContent=p+'%';
+      if(p>=95)clearInterval(iv);
+    },65);
+  }
+
+  async function handleFile(file){
+    if(!file)return;
+    document.getElementById('file-ready').style.display='none';
+    document.getElementById('file-error').style.display='none';
+    document.getElementById('extract-progress').style.display='none';
+    document.getElementById('step1-next').disabled=true;
+    const isImg=PDFParser.isImage(file),isPdf=PDFParser.isPDF(file),isCsv=file.name.toLowerCase().endsWith('.csv')||file.type==='text/csv';
+    if(isCsv){
+      Papa.parse(file,{header:true,skipEmptyLines:true,
+        complete:r=>{if(!r.data?.length){showError('CSV is empty or unrecognised.');return;}App.rawData=r.data;showReady(file.name,r.data.length+' rows loaded','📊');},
+        error:err=>showError('CSV error: '+err.message)});
+    }else if(isPdf||isImg){
+      const emoji=isImg?'🖼️':'📄';
+      const note=isImg?'OCR may take 20–40 seconds depending on image size.':'Scanned PDFs take longer than digital PDFs.';
+      showProgress(0,'Starting…',note);
+      if(isImg&&typeof Tesseract==='undefined'){showError('Tesseract.js OCR library failed to load. Please refresh and try again.');return;}
+      if(isPdf&&typeof pdfjsLib==='undefined'){showError('PDF.js library failed to load. Please refresh and try again.');return;}
+      try{
+        const rows=await PDFParser.parseFile(file,(pct,msg)=>showProgress(pct,msg,note));
+        if(!rows?.length){showError('No transactions could be extracted. '+(isImg?'Please ensure the image is clear, upright, and not blurry.':'Try exporting a CSV from your bank instead.'));return;}
+        App.rawData=rows;
+        showReady(file.name,rows.length+' transactions extracted',emoji);
+      }catch(err){
+        console.error(err);
+        showError((isImg?'Image OCR failed: ':'PDF read failed: ')+(err.message||'Unknown error')+'. Try a CSV export from your bank instead.');
+      }
+    }else{showError('Unsupported file type. Please upload a JPG, PNG, PDF, or CSV file.');}
+  }
+
+  function setFormat(fmt){
+    _format=fmt;
+    ['all','image','pdf','csv'].forEach(f=>document.getElementById('fmt-'+f)?.classList.toggle('active',f===fmt));
+    const accepts={all:'.pdf,.csv,.jpg,.jpeg,.png,.bmp,.webp',image:'.jpg,.jpeg,.png,.bmp,.webp',pdf:'.pdf',csv:'.csv'};
+    const labels={all:'Drop file here or click to browse',image:'Drop JPG or PNG image here',pdf:'Drop PDF bank statement here',csv:'Drop CSV export here'};
+    const input=document.getElementById('file-input'),lbl=document.getElementById('dz-label');
+    if(input)input.accept=accepts[fmt];if(lbl)lbl.textContent=labels[fmt];
+  }
+
+  function init(){
+    document.getElementById('page-upload').innerHTML=buildTemplate();
+    showStep(0);
+    document.getElementById('step0-next').addEventListener('click',()=>showStep(1));
+    const dropzone=document.getElementById('dropzone'),fileInput=document.getElementById('file-input');
+    dropzone.addEventListener('click',()=>fileInput.click());
+    dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.style.borderColor='var(--accent)';dropzone.style.background='var(--surface3)';});
+    dropzone.addEventListener('dragleave',()=>{dropzone.style.borderColor='';dropzone.style.background='';});
+    dropzone.addEventListener('drop',e=>{e.preventDefault();dropzone.style.borderColor='';dropzone.style.background='';if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+    fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
+    document.getElementById('sample-data-btn').addEventListener('click',()=>{
+      App.rawData=generateSampleData();
+      document.getElementById('extract-progress').style.display='none';
+      showReady('sample_statement.csv',App.rawData.length+' sample transactions loaded','📊');
+    });
+    document.getElementById('step1-next').addEventListener('click',async()=>{
+      if(!App.rawData?.length)return;
+      showStep(2);animateAnalysis();
+      App.summary=buildSummary(App.rawData);
+      try{App.summary.story=await fetchSpendingStory(App.summary);}
+      catch(_){App.summary.story='Your spending tells a clear story this month. Food and shopping dominate your outgoings, with a few high-spend days pushing your weekly average up. Reviewing subscriptions could unlock meaningful savings.';}
+      const bar=document.getElementById('analysis-bar'),lbl=document.getElementById('analysis-pct');
+      if(bar)bar.style.width='100%';if(lbl)lbl.textContent='100%';
+      setTimeout(()=>{App.navigate('overview');document.getElementById('upload-status').textContent=App.summary.count+' transactions loaded';},500);
+    });
+  }
+  return{init,setFormat};
+})();
+
+/* ═══════════════════════════════════════════
+   OVERVIEW PAGE
+   ═══════════════════════════════════════════ */
+const OverviewPage=(() => {
+  const TEMPLATE=`
+    <div class="grid-4" style="margin-bottom:20px;">
+      <div class="metric-card"><div class="metric-label">Total spent</div><div class="metric-val" id="ov-total">—</div></div>
+      <div class="metric-card"><div class="metric-label">Transactions</div><div class="metric-val" id="ov-txn">—</div></div>
+      <div class="metric-card"><div class="metric-label">Daily average</div><div class="metric-val" id="ov-avg">—</div></div>
+      <div class="metric-card"><div class="metric-label">Top category</div><div class="metric-val" style="font-size:16px;" id="ov-cat">—</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <div style="width:22px;height:22px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <span style="font-size:13px;font-weight:500;">Your AI story</span>
+        <span class="tag tag-g" style="font-size:10px;">AI generated</span>
+      </div>
+      <p id="ov-story" style="font-size:14px;color:var(--text2);line-height:1.8;"></p>
+    </div>
+    <div class="grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <p style="font-size:13px;font-weight:500;margin-bottom:12px;">Spending by category</p>
+        <div id="ov-cat-legend" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+        <div style="position:relative;height:170px;"><canvas id="ov-cat-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <p style="font-size:13px;font-weight:500;margin-bottom:12px;">Daily spending trend</p>
+        <div style="position:relative;height:200px;"><canvas id="ov-trend-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <p style="font-size:13px;font-weight:500;margin-bottom:12px;">Anomalies detected</p>
+      <div id="ov-anomalies"></div>
+    </div>`;
+
+  function render(s){
+    document.getElementById('page-overview').innerHTML=TEMPLATE;
+    document.getElementById('ov-total').textContent='$'+s.total.toFixed(0);
+    document.getElementById('ov-txn').textContent=s.count;
+    document.getElementById('ov-avg').textContent='$'+s.dailyAvg.toFixed(0);
+    document.getElementById('ov-cat').textContent=s.cats[0]?s.cats[0][0].split(' ')[0]:'—';
+    document.getElementById('ov-story').textContent=s.story||'Analyzing your spending patterns…';
+    const catLabels=s.cats.slice(0,6).map(c=>c[0]),catVals=s.cats.slice(0,6).map(c=>Math.round(c[1]));
+    document.getElementById('ov-cat-legend').innerHTML=catLabels.map((l,i)=>`<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)"><span style="width:7px;height:7px;border-radius:2px;background:${COLORS[i]};display:inline-block"></span>${l.split(' ')[0]}</span>`).join('');
+    createCategoryChart('ov-cat-chart',catLabels,catVals);
+    const trendLabels=s.byDate.slice(-14).map(d=>d[0].slice(5)),trendVals=s.byDate.slice(-14).map(d=>Math.round(d[1]));
+    createTrendChart('ov-trend-chart',trendLabels,trendVals);
+    const avg=s.total/(s.byDate.length||1),anomalies=[];
+    s.byDate.forEach(([date,amt])=>{if(amt>avg*2.2)anomalies.push({text:`Spending spike on ${date} — $${Math.round(amt)} (${Math.round(amt/avg)}x your average)`,color:'r'});});
+    if(s.cats[0]&&s.cats[0][1]/s.total>0.38)anomalies.push({text:`${s.cats[0][0]} is ${Math.round(s.cats[0][1]/s.total*100)}% of total spending`,color:'a'});
+    if(s.subs.length>3)anomalies.push({text:`${s.subs.length} subscriptions detected — $${s.subs.reduce((a,b)=>a+b.monthly,0).toFixed(0)}/month in recurring charges`,color:'b'});
+    const labels={r:'Spike',a:'High',b:'Note'};
+    document.getElementById('ov-anomalies').innerHTML=anomalies.length?anomalies.map(a=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--r);margin-bottom:6px;"><span class="tag tag-${a.color}" style="white-space:nowrap;margin-top:1px;">${labels[a.color]}</span><p style="font-size:13px;color:var(--text2);line-height:1.5;">${a.text}</p></div>`).join(''):'<p style="font-size:13px;color:var(--text3);">No major anomalies detected. Spending looks consistent.</p>';
+  }
+  return{render};
+})();
+
+/* ═══════════════════════════════════════════
+   TRANSACTIONS PAGE
+   ═══════════════════════════════════════════ */
+const TransactionsPage=(() => {
+  let _allTxns=[];
+  const TEMPLATE=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input class="search-input" id="txn-search" placeholder="Search transactions…" oninput="TransactionsPage.filter()">
+        <select class="filter-select" id="txn-cat-filter" onchange="TransactionsPage.filter()"><option value="">All categories</option></select>
+        <select class="filter-select" id="txn-sort" onchange="TransactionsPage.filter()" style="width:auto;">
+          <option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option>
+          <option value="amt-desc">Highest amount</option><option value="amt-asc">Lowest amount</option>
+        </select>
+      </div>
+      <button class="btn btn-sm" id="export-pdf-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Export CSV
+      </button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right;">Amount</th></tr></thead>
+          <tbody id="txn-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <p id="txn-count-label" style="font-size:12px;color:var(--text3);margin-top:8px;"></p>`;
+
+  function renderRows(txns){
+    const max=200;
+    document.getElementById('txn-tbody').innerHTML=txns.slice(0,max).map(t=>`
+      <tr>
+        <td style="color:var(--text3);">${t.date}</td>
+        <td style="font-weight:500;">${t.desc}</td>
+        <td><span class="tag tag-b" style="font-size:10px;">${t.cat}</span></td>
+        <td style="text-align:right;color:var(--danger);font-weight:500;">-$${parseFloat(t.amt).toFixed(2)}</td>
+      </tr>`).join('');
+    document.getElementById('txn-count-label').textContent=`Showing ${Math.min(txns.length,max)} of ${txns.length} transactions`;
+  }
+
+  function filter(){
+    const q=document.getElementById('txn-search').value.toLowerCase();
+    const cat=document.getElementById('txn-cat-filter').value;
+    const sort=document.getElementById('txn-sort').value;
+    let filtered=_allTxns.filter(t=>{
+      const matchQ=!q||t.desc.toLowerCase().includes(q)||t.date.includes(q);
+      const matchCat=!cat||t.cat===cat;
+      return matchQ&&matchCat;
+    });
+    filtered=filtered.sort((a,b)=>{
+      if(sort==='date-desc')return new Date(b.date)-new Date(a.date);
+      if(sort==='date-asc')return new Date(a.date)-new Date(b.date);
+      if(sort==='amt-desc')return b.amt-a.amt;
+      if(sort==='amt-asc')return a.amt-b.amt;
+      return 0;
+    });
+    renderRows(filtered);
+  }
+
+  function render(summary){
+    document.getElementById('page-transactions').innerHTML=TEMPLATE;
+    _allTxns=summary.txns.slice().reverse();
+    const cats=[...new Set(summary.txns.map(t=>t.cat))].sort();
+    const sel=document.getElementById('txn-cat-filter');
+    cats.forEach(c=>{const opt=document.createElement('option');opt.value=opt.textContent=c;sel.appendChild(opt);});
+    renderRows(_allTxns);
+    document.getElementById('export-pdf-btn').addEventListener('click',()=>{
+      // Real CSV export
+      const headers=['Date','Description','Category','Amount'];
+      const rows=_allTxns.map(t=>[t.date,`"${t.desc.replace(/"/g,'""')}"`,t.cat,t.amt.toFixed(2)]);
+      const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
+      const blob=new Blob([csv],{type:'text/csv'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download='transactions.csv';a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+  return{render,filter};
+})();
+
+/* ═══════════════════════════════════════════
+   COMPARE PAGE
+   ═══════════════════════════════════════════ */
+const ComparePage=(() => {
+  const TEMPLATE=`
+    <div class="tabs">
+      <button class="tab active" onclick="ComparePage.switchTab('monthly',this)">Month Comparison</button>
+      <button class="tab" onclick="ComparePage.switchTab('forecast',this)">AI Forecast</button>
+    </div>
+    <div id="ctab-monthly">
+      <div class="grid-3" style="margin-bottom:16px;">
+        <div class="metric-card"><div class="metric-label">Current period</div><div class="metric-val" id="c-cur">—</div></div>
+        <div class="metric-card"><div class="metric-label">Prior period</div><div class="metric-val" id="c-prev">—</div></div>
+        <div class="metric-card"><div class="metric-label">Change</div><div class="metric-val" id="c-diff">—</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <p style="font-size:13px;font-weight:500;margin-bottom:12px;">Day-by-day comparison</p>
+        <div style="position:relative;height:220px;"><canvas id="compare-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <p style="font-size:13px;font-weight:500;margin-bottom:12px;">Category breakdown</p>
+        <div id="cat-compare-list"></div>
+      </div>
+    </div>
+    <div id="ctab-forecast" style="display:none;">
+      <div class="card" style="margin-bottom:16px;background:var(--surface2);border-style:dashed;">
+        <p style="font-size:13px;font-weight:500;margin-bottom:6px;">AI spending forecast</p>
+        <p id="forecast-text" style="font-size:13px;color:var(--text2);line-height:1.7;"></p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;" id="forecast-cards"></div>
+    </div>`;
+
+  function switchTab(name,el){
+    ['monthly','forecast'].forEach(t=>{document.getElementById(`ctab-${t}`).style.display=t===name?'block':'none';});
+    document.querySelectorAll('#page-compare .tab').forEach(b=>b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function render(s){
+    document.getElementById('page-compare').innerHTML=TEMPLATE;
+    document.getElementById('c-cur').textContent='$'+s.secHalf.toFixed(0);
+    document.getElementById('c-prev').textContent='$'+s.firstHalf.toFixed(0);
+    const diff=s.secHalf-s.firstHalf,pct=s.firstHalf>0?Math.abs(diff/s.firstHalf*100).toFixed(1):0;
+    const dEl=document.getElementById('c-diff');
+    dEl.textContent=(diff>0?'+':'')+pct+'%';
+    dEl.style.color=diff>0?'var(--danger)':'var(--success)';
+    const half=Math.floor(s.byDate.length/2),w1=s.byDate.slice(0,half),w2=s.byDate.slice(half);
+    const maxL=Math.max(w1.length,w2.length);
+    const cLbls=Array.from({length:maxL},(_,i)=>'Day '+(i+1));
+    createCompareChart('compare-chart',cLbls,w1.map(d=>Math.round(d[1])),w2.map(d=>Math.round(d[1])));
+    document.getElementById('cat-compare-list').innerHTML=s.cats.slice(0,5).map((c,i)=>`
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:13px;">${c[0]}</span><span style="font-size:13px;font-weight:500;">$${c[1].toFixed(0)}</span></div>
+        <div class="progress"><div class="progress-fill" style="width:${Math.round(c[1]/s.total*100)}%;background:${COLORS[i]};"></div></div>
+      </div>`).join('');
+    const nextEst=s.dailyAvg*30*(1+((s.secHalf-s.firstHalf)/(s.firstHalf||1))*.5);
+    document.getElementById('forecast-text').textContent=`Based on your current trajectory, you're on track to spend approximately $${nextEst.toFixed(0)} next month. Your spending has ${diff>0?'increased':'decreased'} by ${pct}% compared to the prior period. `+(diff>0?'Consider cutting back on your top category to stay on budget.':'Great trend — keep it up!');
+    const forecasts=[
+      {cat:'Food & Dining',est:(s.cats.find(c=>c[0].includes('Food'))?.[1]||120)*1.05,tip:'Try meal prepping 2x/week to cut delivery costs'},
+      {cat:'Shopping',est:(s.cats.find(c=>c[0].includes('Shopping'))?.[1]||80)*.95,tip:'Set a wishlist rule: wait 48h before buying'},
+      {cat:'Subscriptions',est:s.subs.reduce((a,b)=>a+b.monthly,0),tip:'Cancel 1 unused subscription this month'}
+    ];
+    document.getElementById('forecast-cards').innerHTML=forecasts.map(f=>`
+      <div class="forecast-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:13px;font-weight:500;">${f.cat}</span><span style="font-size:14px;font-weight:500;color:var(--accent2);">~$${f.est.toFixed(0)}</span></div>
+        <p style="font-size:12px;color:var(--text3);">${f.tip}</p>
+      </div>`).join('');
+  }
+  return{render,switchTab};
+})();
+
+/* ═══════════════════════════════════════════
+   SCORE PAGE
+   ═══════════════════════════════════════════ */
+const ScorePage=(() => {
+  function calcScore(s){
+    const subR=s.subs.reduce((a,b)=>a+b.monthly,0)/s.total;
+    const topR=s.cats[0]?s.cats[0][1]/s.total:0;
+    const fq=s.count>80?15:s.count>60?8:0;
+    const sp=subR>.25?18:subR>.15?9:0;
+    const cp=topR>.6?15:topR>.45?8:0;
+    const sc=Math.max(22,Math.min(97,Math.round(100-fq-sp-cp)));
+    return{score:sc,subs:Math.max(0,100-sp*4),freq:Math.max(0,100-fq*4),div:Math.max(0,100-cp*4)};
+  }
+
+  const TEMPLATE=`
+    <div class="grid-2" style="margin-bottom:20px;align-items:center;">
+      <div style="text-align:center;">
+        <svg width="130" height="130" viewBox="0 0 130 130">
+          <circle cx="65" cy="65" r="54" fill="none" stroke="var(--surface3)" stroke-width="10"/>
+          <circle id="score-ring" cx="65" cy="65" r="54" fill="none" stroke="#1a1916" stroke-width="10" stroke-linecap="round" stroke-dasharray="339" stroke-dashoffset="339" style="transform:rotate(-90deg);transform-origin:65px 65px;transition:stroke-dashoffset 1.2s ease,stroke .5s;"/>
+        </svg>
+        <div style="margin-top:-80px;margin-bottom:60px;">
+          <p id="score-num" style="font-family:var(--font-serif);font-size:36px;">—</p>
+          <p style="font-size:11px;color:var(--text3);">out of 100</p>
+        </div>
+      </div>
+      <div>
+        <p id="score-lbl" style="font-size:20px;font-weight:500;margin-bottom:6px;"></p>
+        <p id="score-desc" style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px;"></p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="score-tags"></div>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-bottom:16px;" id="score-breakdown"></div>
+    <div class="card">
+      <p style="font-size:13px;font-weight:500;margin-bottom:12px;">Personalised recommendations</p>
+      <div id="score-tips"></div>
+    </div>`;
+
+  function render(summary){
+    document.getElementById('page-score').innerHTML=TEMPLATE;
+    const sc=calcScore(summary);
+    setTimeout(()=>{
+      const offset=339-(339*sc.score/100);
+      const ring=document.getElementById('score-ring');
+      ring.style.strokeDashoffset=offset;
+      ring.style.stroke=sc.score>=80?'#2d7a4f':sc.score>=65?'#2563a8':sc.score>=50?'#d4780a':'#c0392b';
+    },100);
+    document.getElementById('score-num').textContent=sc.score;
+    document.getElementById('score-lbl').textContent=sc.score>=80?'Excellent':sc.score>=65?'Good':sc.score>=50?'Fair':'Needs attention';
+    document.getElementById('score-desc').textContent=sc.score>=80?'Your spending habits are well-balanced and healthy.':sc.score>=65?'Good habits overall with a few areas to improve.':sc.score>=50?'Some patterns worth addressing.':'Several areas need attention.';
+    document.getElementById('score-tags').innerHTML=[
+      sc.score>=75?'<span class="tag tag-g">Low risk</span>':'<span class="tag tag-r">Higher risk</span>',
+      summary.subs.length<=3?'<span class="tag tag-g">Low subscriptions</span>':'<span class="tag tag-a">Many subscriptions</span>',
+      summary.count<=60?'<span class="tag tag-g">Healthy frequency</span>':'<span class="tag tag-a">High frequency</span>'
+    ].join('');
+    document.getElementById('score-breakdown').innerHTML=[
+      {l:'Subscription load',v:sc.subs,n:sc.subs>=70?'Manageable':'Too high'},
+      {l:'Spend frequency',v:sc.freq,n:sc.freq>=70?'Normal':'Very frequent'},
+      {l:'Category balance',v:sc.div,n:sc.div>=70?'Balanced':'Concentrated'}
+    ].map(b=>`
+      <div class="metric-card">
+        <div class="metric-label">${b.l}</div>
+        <div class="metric-val" style="font-size:28px;">${b.v}</div>
+        <div style="margin-top:6px;"><div class="progress"><div class="progress-fill" style="width:${b.v}%;background:${b.v>=70?'#3d6b4f':b.v>=50?'#d4780a':'#c0392b'};"></div></div></div>
+        <div class="metric-sub">${b.n}</div>
+      </div>`).join('');
+    const tips=['Review your top spending category and set a monthly cap','Try the 24-hour rule before non-essential purchases over $30','Cancel at least one subscription you haven\'t used this month','Set a daily spend notification to stay aware','Build an emergency fund covering 3 months of average spending'];
+    document.getElementById('score-tips').innerHTML=tips.map(t=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span style="width:18px;height:18px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--accent2)" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </span>
+        <p style="font-size:13px;color:var(--text2);line-height:1.5;">${t}</p>
+      </div>`).join('');
+  }
+  return{render};
+})();
+
+/* ═══════════════════════════════════════════
+   SUBSCRIPTIONS PAGE
+   ═══════════════════════════════════════════ */
+const SubscriptionsPage=(() => {
+  const TEMPLATE=`
+    <div class="grid-3" style="margin-bottom:16px;">
+      <div class="metric-card"><div class="metric-label">Monthly cost</div><div class="metric-val" id="sub-mo">—</div></div>
+      <div class="metric-card"><div class="metric-label">Yearly cost</div><div class="metric-val" id="sub-yr">—</div></div>
+      <div class="metric-card"><div class="metric-label">Detected</div><div class="metric-val" id="sub-n">—</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <p style="font-size:13px;font-weight:500;">All detected subscriptions</p>
+        <span class="tag tag-b" id="sub-pct-label"></span>
+      </div>
+      <div id="subs-list"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <p style="font-size:13px;font-weight:500;margin-bottom:14px;">Cost breakdown</p>
+      <div id="sub-breakdown"></div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--warn);background:var(--surface2);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="var(--warn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p style="font-size:13px;font-weight:500;">Savings insight</p>
+      </div>
+      <p id="sub-insight" style="font-size:13px;color:var(--text2);line-height:1.7;"></p>
+    </div>`;
+
+  function render(s){
+    document.getElementById('page-subscriptions').innerHTML=TEMPLATE;
+    const mo=s.subs.reduce((a,b)=>a+b.monthly,0);
+    const yr=mo*12;
+    const pctOfTotal=s.total>0?Math.round(mo/s.total*100):0;
+    document.getElementById('sub-mo').textContent='$'+mo.toFixed(0);
+    document.getElementById('sub-yr').textContent='$'+yr.toFixed(0);
+    document.getElementById('sub-n').textContent=s.subs.length;
+    document.getElementById('sub-pct-label').textContent=pctOfTotal+'% of total spend';
+    const sorted=[...s.subs].sort((a,b)=>b.monthly-a.monthly);
+    document.getElementById('subs-list').innerHTML=sorted.length?sorted.map(sub=>{
+      const pct=mo>0?Math.round(sub.monthly/mo*100):0;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:34px;height:34px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--text2);">${sub.name.slice(0,2).toUpperCase()}</div>
+          <div><p style="font-size:13px;font-weight:500;">${sub.name}</p><p style="font-size:11px;color:var(--text3);">${sub.count} charge${sub.count>1?'s':''} detected · ${pct}% of sub spend</p></div>
+        </div>
+        <div style="text-align:right;"><p style="font-size:13px;font-weight:500;">$${sub.monthly.toFixed(2)}/mo</p><p style="font-size:11px;color:var(--text3);">$${(sub.monthly*12).toFixed(0)}/yr</p></div>
+      </div>`;
+    }).join(''):'<p style="font-size:13px;color:var(--text3);">No subscriptions detected in your data.</p>';
+    document.getElementById('sub-breakdown').innerHTML=sorted.slice(0,6).map((sub,i)=>{
+      const pct=mo>0?Math.round(sub.monthly/mo*100):0;
+      return `<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;color:var(--text2);">${sub.name}</span><span style="font-size:12px;font-weight:500;">$${sub.monthly.toFixed(2)}/mo</span></div><div class="progress"><div class="progress-fill" style="width:${pct}%;background:${COLORS[i%COLORS.length]};"></div></div></div>`;
+    }).join('');
+    const worst=sorted[0];
+    const savings=s.subs.slice(-2).reduce((a,b)=>a+b.monthly,0)*12;
+    document.getElementById('sub-insight').textContent=s.subs.length>0?`You're spending $${mo.toFixed(0)}/month on ${s.subs.length} subscription${s.subs.length>1?'s':''} — $${yr.toFixed(0)}/year. Your most expensive is ${worst?.name} at $${worst?.monthly.toFixed(2)}/mo. Cancelling your 2 least-used services could save you $${savings.toFixed(0)} annually.`:'No recurring subscriptions found. Great job keeping your fixed costs lean!';
+  }
+  return{render};
+})();
+
+/* ═══════════════════════════════════════════
+   BUDGET PAGE
+   ═══════════════════════════════════════════ */
+const BudgetPage=(() => {
+  const TEMPLATE=`
+    <div class="card" style="margin-bottom:16px;border-left:3px solid var(--accent2);background:var(--surface2);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round"/></svg>
+        <p style="font-size:13px;font-weight:500;">AI budget suggestion</p>
+      </div>
+      <p id="budget-desc" style="font-size:13px;color:var(--text2);line-height:1.7;"></p>
+    </div>
+    <div class="grid-3" style="margin-bottom:16px;">
+      <div class="metric-card"><div class="metric-label">Total actual</div><div class="metric-val" id="bdg-actual">—</div></div>
+      <div class="metric-card"><div class="metric-label">Suggested budget</div><div class="metric-val" style="color:var(--success);" id="bdg-target">—</div></div>
+      <div class="metric-card"><div class="metric-label">Potential saving</div><div class="metric-val" style="color:var(--accent2);" id="bdg-saving">—</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;" id="budget-list"></div>
+    <div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:var(--r);display:flex;align-items:flex-start;gap:10px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:2px;"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="var(--info)" stroke-width="2" stroke-linecap="round"/></svg>
+      <p style="font-size:12px;color:var(--text3);line-height:1.6;">These budgets are calculated from your actual spending with a 15% reduction target. They are suggestions — adjust them based on your personal goals and lifestyle.</p>
+    </div>`;
+
+  function render(s){
+    document.getElementById('page-budget').innerHTML=TEMPLATE;
+    const totalTarget=s.cats.slice(0,6).reduce((a,c)=>a+Math.round(c[1]*.85),0);
+    const saving=s.total-totalTarget;
+    document.getElementById('budget-desc').textContent=`Based on your actual spending across ${s.cats.length} categories, here are personalised monthly budgets with a 15% reduction goal. Following these targets could save you approximately $${saving.toFixed(0)} over the coming month.`;
+    document.getElementById('bdg-actual').textContent='$'+s.total.toFixed(0);
+    document.getElementById('bdg-target').textContent='$'+totalTarget.toFixed(0);
+    document.getElementById('bdg-saving').textContent='$'+saving.toFixed(0);
+    document.getElementById('budget-list').innerHTML=s.cats.slice(0,6).map((c,i)=>{
+      const actual=c[1],target=Math.round(actual*.85),pct=Math.round(actual/s.total*100);
+      const barW=Math.min(100,Math.round(actual/s.total*600));
+      const overBy=actual-target;
+      const statusColor=overBy>50?'var(--danger)':overBy>0?'var(--warn)':'var(--success)';
+      return `<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+          <div><p style="font-size:13px;font-weight:500;">${c[0]}</p><p style="font-size:11px;color:var(--text3);">${pct}% of total spending</p></div>
+          <div style="display:flex;gap:18px;align-items:center;">
+            <div style="text-align:center;"><p style="font-size:10px;color:var(--text3);margin-bottom:2px;">Actual</p><p style="font-size:15px;font-weight:500;color:var(--danger);">$${actual.toFixed(0)}</p></div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="var(--text3)" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <div style="text-align:center;"><p style="font-size:10px;color:var(--text3);margin-bottom:2px;">Target</p><p style="font-size:15px;font-weight:500;color:var(--success);">$${target}</p></div>
+          </div>
+        </div>
+        <div style="position:relative;height:8px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-bottom:6px;">
+          <div style="position:absolute;left:0;top:0;height:100%;width:${barW}%;background:${COLORS[i]};border-radius:99px;opacity:.35;"></div>
+          <div style="position:absolute;left:0;top:0;height:100%;width:${Math.round(barW*.85)}%;background:${COLORS[i]};border-radius:99px;"></div>
+        </div>
+        <p style="font-size:11px;color:${statusColor};">Cut <strong style="color:${statusColor};">$${overBy.toFixed(0)}</strong> to hit target — saves <strong>$${(overBy*12).toFixed(0)}</strong>/year</p>
+      </div>`;
+    }).join('');
+  }
+  return{render};
+})();
+
+/* ═══════════════════════════════════════════
+   CHAT PAGE
+   ═══════════════════════════════════════════ */
+const ChatPage=(() => {
+  let _context='';
+  const QUICK_QUESTIONS=['What did I spend the most on?','Am I overspending on food?','How can I save $100 next month?','What are my worst spending habits?','Which subscriptions should I cancel?','What was my biggest purchase?'];
+
+  const TEMPLATE=`
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:8px;height:8px;background:#2d7a4f;border-radius:50%;"></div>
+          <span style="font-size:13px;font-weight:500;">Ask your financial data anything</span>
+        </div>
+        <button class="btn btn-sm" id="chat-clear-btn">Clear chat</button>
+      </div>
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-msg ai">Hi! I'm your personal finance assistant. I have full context of your spending data and can answer any question about your finances. Try asking me something below!</div>
+        </div>
+        <div class="chat-quick" id="chat-quick">
+          ${QUICK_QUESTIONS.map(q=>`<button class="btn btn-sm" onclick="ChatPage.quickAsk('${q}')">${q}</button>`).join('')}
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-input" placeholder="Ask about your spending…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ChatPage.send();}">
+          <button class="btn btn-dark btn-sm" onclick="ChatPage.send()">Send</button>
+        </div>
+      </div>
+    </div>`;
+
+  function appendMsg(text,role){
+    const div=document.createElement('div');
+    div.className='chat-msg '+role;div.textContent=text;
+    const msgs=document.getElementById('chat-messages');
+    msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
+    return div;
+  }
+  function showTyping(){
+    const div=document.createElement('div');
+    div.className='chat-msg ai';div.id='chat-typing';
+    div.innerHTML='<span style="opacity:.5;letter-spacing:2px;">• • •</span>';
+    const msgs=document.getElementById('chat-messages');
+    msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
+  }
+  function removeTyping(){document.getElementById('chat-typing')?.remove();}
+
+  async function send(){
+    const input=document.getElementById('chat-input');
+    const msg=input.value.trim();if(!msg)return;
+    input.value='';
+    const quick=document.getElementById('chat-quick');
+    if(quick)quick.style.display='none';
+    appendMsg(msg,'user');showTyping();
+    try{
+      const reply=await fetchChatReply(msg,_context);
+      removeTyping();appendMsg(reply,'ai');
+    }catch(_){
+      removeTyping();appendMsg('Sorry, I had trouble connecting. Please check your connection and try again.','ai');
+    }
+  }
+
+  function quickAsk(question){document.getElementById('chat-input').value=question;send();}
+
+  function clearChat(){
+    const msgs=document.getElementById('chat-messages');
+    msgs.innerHTML='<div class="chat-msg ai">Chat cleared. I still have full context of your spending — ask me anything!</div>';
+    const quick=document.getElementById('chat-quick');if(quick)quick.style.display='flex';
+  }
+
+  function render(summary){
+    document.getElementById('page-chat').innerHTML=TEMPLATE;
+    _context=`User's financial summary:\n- Total spent: $${summary.total.toFixed(2)} over ${summary.byDate.length} days\n- Daily average: $${summary.dailyAvg.toFixed(2)}\n- Total transactions: ${summary.count}\n- Top categories: ${summary.cats.slice(0,5).map(c=>c[0]+' $'+c[1].toFixed(0)).join(', ')}\n- Subscriptions: ${summary.subs.length} detected, $${summary.subs.reduce((a,b)=>a+b.monthly,0).toFixed(0)}/month\n- Biggest spending day: ${summary.bigDay?summary.bigDay[0]+' ($'+summary.bigDay[1].toFixed(0)+')':'unknown'}\n- Spending personality: based on top category ${summary.cats[0]?.[0]||'unknown'}`;
+    document.getElementById('chat-clear-btn').addEventListener('click',clearChat);
+  }
+  return{render,send,quickAsk};
+})();
+
+/* ═══════════════════════════════════════════
+   WRAPPED PAGE
+   ═══════════════════════════════════════════ */
+const WrappedPage=(() => {
+  function getPersonality(summary){
+    const top=summary.cats[0]?.[0]||'Shopping';
+    const personalities={
+      'Food & Dining':{name:'The Foodie',desc:'You live to eat. Restaurants and delivery are your love language.',emoji:'🍜'},
+      'Travel':{name:'The Explorer',desc:'You invest in experiences over things. Every trip is money well spent.',emoji:'✈️'},
+      'Shopping':{name:'The Collector',desc:'You curate your world with care. Quality and style matter to you.',emoji:'🛍️'},
+      'Entertainment':{name:'The Entertainer',desc:'Life is short — you fill it with music, shows, and unforgettable moments.',emoji:'🎬'},
+      'Health':{name:'The Wellness Seeker',desc:'You invest in your body. Self-care is a priority, not a luxury.',emoji:'💪'},
+      'Utilities':{name:'The Pragmatist',desc:'You spend on what keeps life running smoothly. No fuss, just function.',emoji:'⚙️'},
+      'Transport':{name:'The Commuter',desc:"You're always on the move. Getting there efficiently is what matters most.",emoji:'🚗'},
+    };
+    return personalities[top]||{name:'The Pragmatist',desc:'You spend on what truly matters. Purpose over flash.',emoji:'🎯'};
+  }
+  function getSpendingFact(summary){
+    const topCat=summary.cats[0];if(!topCat)return'';
+    const pct=Math.round(topCat[1]/summary.total*100);
+    const coffeeEquiv=Math.round(topCat[1]/5);
+    return`Your ${topCat[0]} spend of $${topCat[1].toFixed(0)} equals roughly ${coffeeEquiv} coffees, and makes up ${pct}% of everything you spent.`;
+  }
+
+  const TEMPLATE=`
+    <div style="max-width:440px;margin:0 auto;">
+      <div style="background:var(--accent);color:var(--bg);border-radius:20px;padding:30px;text-align:center;margin-bottom:12px;">
+        <p style="font-size:10px;letter-spacing:.18em;opacity:.45;margin-bottom:22px;">SPENDSTORY · WRAPPED</p>
+        <p style="font-size:12px;opacity:.55;margin-bottom:4px;">You spent a total of</p>
+        <p style="font-family:var(--font-serif);font-size:54px;line-height:1;margin-bottom:4px;" id="w-total">—</p>
+        <p style="font-size:13px;opacity:.55;margin-bottom:28px;">across <span id="w-txn" style="opacity:1;font-weight:500;">—</span> transactions</p>
+        <div style="border-top:1px solid rgba(255,255,255,.12);padding:20px 0;">
+          <p style="font-size:10px;letter-spacing:.1em;opacity:.45;margin-bottom:8px;">TOP CATEGORY</p>
+          <p style="font-size:24px;font-weight:500;margin-bottom:2px;" id="w-top">—</p>
+          <p style="font-size:13px;opacity:.55;" id="w-top-amt"></p>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.12);padding:20px 0;">
+          <p style="font-size:10px;letter-spacing:.1em;opacity:.45;margin-bottom:8px;">YOUR SPENDING PERSONALITY</p>
+          <p style="font-size:28px;margin-bottom:4px;" id="w-pers-emoji">—</p>
+          <p style="font-size:20px;font-weight:500;margin-bottom:6px;" id="w-pers-name">—</p>
+          <p style="font-size:12px;opacity:.6;line-height:1.6;max-width:300px;margin:0 auto;" id="w-pers-desc"></p>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.12);padding-top:20px;">
+          <p style="font-size:10px;letter-spacing:.1em;opacity:.45;margin-bottom:8px;">BIGGEST SPLURGE DAY</p>
+          <p style="font-size:18px;font-weight:500;" id="w-splurge">—</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div style="background:var(--surface2);border-radius:var(--r);padding:16px;text-align:center;"><p style="font-size:11px;color:var(--text3);margin-bottom:4px;">Daily average</p><p style="font-size:22px;font-weight:500;" id="w-avg">—</p></div>
+        <div style="background:var(--surface2);border-radius:var(--r);padding:16px;text-align:center;"><p style="font-size:11px;color:var(--text3);margin-bottom:4px;">Categories tracked</p><p style="font-size:22px;font-weight:500;" id="w-cats">—</p></div>
+        <div style="background:var(--surface2);border-radius:var(--r);padding:16px;text-align:center;"><p style="font-size:11px;color:var(--text3);margin-bottom:4px;">Subscriptions</p><p style="font-size:22px;font-weight:500;" id="w-subs">—</p></div>
+        <div style="background:var(--surface2);border-radius:var(--r);padding:16px;text-align:center;"><p style="font-size:11px;color:var(--text3);margin-bottom:4px;">Most frugal day</p><p style="font-size:16px;font-weight:500;" id="w-frugal">—</p></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--r);padding:14px;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start;">
+        <span style="font-size:18px;">💡</span>
+        <p id="w-fact" style="font-size:12px;color:var(--text2);line-height:1.6;"></p>
+      </div>
+      <button class="btn btn-dark btn-full" id="w-share-btn">Share your Wrapped ↗</button>
+      <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;">Copies a summary to your clipboard</p>
+    </div>`;
+
+  function render(summary){
+    document.getElementById('page-wrapped').innerHTML=TEMPLATE;
+    const p=getPersonality(summary);
+    document.getElementById('w-total').textContent='$'+summary.total.toFixed(0);
+    document.getElementById('w-txn').textContent=summary.count;
+    document.getElementById('w-top').textContent=summary.cats[0]?.[0]||'—';
+    document.getElementById('w-top-amt').textContent=summary.cats[0]?'$'+summary.cats[0][1].toFixed(0)+' spent':'';
+    document.getElementById('w-pers-emoji').textContent=p.emoji;
+    document.getElementById('w-pers-name').textContent=p.name;
+    document.getElementById('w-pers-desc').textContent=p.desc;
+    document.getElementById('w-splurge').textContent=summary.bigDay?summary.bigDay[0]+' — $'+summary.bigDay[1].toFixed(0):'—';
+    document.getElementById('w-avg').textContent='$'+summary.dailyAvg.toFixed(0);
+    document.getElementById('w-cats').textContent=summary.cats.length;
+    document.getElementById('w-subs').textContent=summary.subs.length;
+    document.getElementById('w-frugal').textContent=summary.smallDay?summary.smallDay[0].slice(5):'—';
+    document.getElementById('w-fact').textContent=getSpendingFact(summary);
+    document.getElementById('w-share-btn').addEventListener('click',()=>{
+      const shareText=`My SpendStory Wrapped 🎉\n\nTotal spent: $${summary.total.toFixed(0)}\nTransactions: ${summary.count}\nTop category: ${summary.cats[0]?.[0]||'—'}\nPersonality: ${p.emoji} ${p.name}\nBiggest splurge: ${summary.bigDay?summary.bigDay[0]+' $'+summary.bigDay[1].toFixed(0):'—'}\n\n${p.desc}`;
+      navigator.clipboard?.writeText(shareText).then(()=>alert('Copied to clipboard! Share your SpendStory Wrapped.')).catch(()=>alert(shareText));
+    });
+  }
+  return{render};
+})();
+
+/* ═══════════════════════════════════════════
+   APP SHELL
+   ═══════════════════════════════════════════ */
+const App=(() => {
+  const state={rawData:null,summary:null};
+  const DATA_PAGES={
+    overview:{title:'Overview',module:()=>OverviewPage},
+    transactions:{title:'Transactions',module:()=>TransactionsPage},
+    compare:{title:'Compare & Forecast',module:()=>ComparePage},
+    score:{title:'Health Score',module:()=>ScorePage},
+    subscriptions:{title:'Subscriptions',module:()=>SubscriptionsPage},
+    budget:{title:'Smart Budget',module:()=>BudgetPage},
+    chat:{title:'AI Chat',module:()=>ChatPage},
+    wrapped:{title:'Spending Wrapped',module:()=>WrappedPage},
+  };
+  const PAGE_TITLES={upload:'Upload',...Object.fromEntries(Object.entries(DATA_PAGES).map(([k,v])=>[k,v.title]))};
+
+  function navigate(pageId){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    const pageEl=document.getElementById('page-'+pageId);if(!pageEl)return;
+    pageEl.classList.add('active');
+    document.getElementById('page-title').textContent=PAGE_TITLES[pageId]||pageId;
+    document.querySelectorAll('.nav-item[data-page]').forEach(btn=>btn.classList.toggle('active',btn.dataset.page===pageId));
+    document.getElementById('sidebar').classList.remove('open');
+    if(pageId==='upload'){
+      UploadPage.init();
+    }else if(DATA_PAGES[pageId]){
+      if(state.summary){
+        DATA_PAGES[pageId].module().render(state.summary);
+      }else{
+        pageEl.innerHTML=`
+          <div style="max-width:420px;margin:60px auto 0;text-align:center;padding:0 24px;">
+            <div style="width:52px;height:52px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke="var(--text3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h3 style="font-size:17px;font-weight:500;margin-bottom:8px;">No data loaded yet</h3>
+            <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px;">Upload your bank statement first to unlock this page. Supports scanned images, PDFs, and CSV files.</p>
+            <button class="btn btn-dark" onclick="App.navigate('upload')" style="padding:10px 24px;font-size:14px;">Upload statement →</button>
+          </div>`;
+      }
+    }
+  }
+
+  function updateSidebarLockState(){
+    const hasData=!!state.summary;
+    document.querySelectorAll('.nav-item[data-page]').forEach(btn=>{
+      const page=btn.dataset.page;
+      if(page==='upload'||!DATA_PAGES[page])return;
+      btn.style.opacity=hasData?'1':'0.45';
+      btn.title=hasData?'':'Upload a bank statement first';
+      btn.style.cursor=hasData?'pointer':'not-allowed';
+    });
+  }
+
+  function init(){
+    UploadPage.init();
+    updateSidebarLockState();
+    document.querySelectorAll('.nav-item[data-page]').forEach(btn=>{
+      btn.addEventListener('click',()=>navigate(btn.dataset.page));
+    });
+    document.getElementById('new-upload-btn').addEventListener('click',()=>navigate('upload'));
+    document.getElementById('dark-toggle').addEventListener('click',()=>document.body.classList.toggle('dark'));
+    document.getElementById('hamburger-btn').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+    // Close sidebar on outside click (mobile)
+    document.addEventListener('click',e=>{
+      const sidebar=document.getElementById('sidebar');
+      if(sidebar.classList.contains('open')&&!sidebar.contains(e.target)&&!document.getElementById('hamburger-btn').contains(e.target)){
+        sidebar.classList.remove('open');
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded',init);
+
+  return{
+    navigate,
+    get summary(){return state.summary;},
+    set summary(v){state.summary=v;updateSidebarLockState();},
+    get rawData(){return state.rawData;},
+    set rawData(v){state.rawData=v;},
+  };
+})();
+</script>
+</body>
+</html>
