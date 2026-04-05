@@ -6,19 +6,7 @@ SpendStory is an AI-powered personal finance platform that transforms raw bank s
 
 ---
 
-## Live Demo
 
-🔗 **[spendstory.netlify.app](https://spendstory.netlify.app)**
-
-> Use the **"Sample data"** button on the upload screen to try it instantly without a real bank statement.
-
----
-
-## Screenshots
-
-| Upload | Overview Dashboard | AI Chat |
-|---|---|---|
-| ![Upload](https://via.placeholder.com/280x180?text=Upload+Screen) | ![Dashboard](https://via.placeholder.com/280x180?text=Overview+Dashboard) | ![Chat](https://via.placeholder.com/280x180?text=AI+Chat) |
 
 ---
 
